@@ -7,6 +7,8 @@ import sys
 import time
 import traceback
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 class ColoredFilter(logging.Filter):
     """
