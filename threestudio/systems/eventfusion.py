@@ -20,14 +20,19 @@ class EventFusion(BaseLift3DSystem):
         # create geometry, material, background, renderer
         # super().configure()
         video_shape = [100, 3, 512, 512]
-        voxels = torch.sigmoid(torch.randn(video_shape))
+        voxels = torch.randn(video_shape)
 
         self.voxels = torch.nn.Parameter(
             voxels, requires_grad=True
         )
     
     def forward(self, t_index):
-        return self.voxels[t_index] # (n, c, h, w)
+        raw_voxels = self.voxels[t_index] # (n, c, h, w)
+
+        # mapping to -0.05, 1.05, easy to represent black and bright regions
+        image = torch.sigmoid(raw_voxels) * 1.1 - 0.05
+
+        return torch.clamp(image, min=0, max=1)
 
     def on_fit_start(self) -> None:
         super().on_fit_start()

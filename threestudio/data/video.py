@@ -61,8 +61,8 @@ class VideoEventDataset(Dataset):
         index_prev = index
         index_curr = index + 1
 
-        image_prev = self.voxels['images'][index_prev]
-        image_curr = self.voxels['images'][index_curr]
+        image_prev = self.voxels['images'][index_prev] / 255.
+        image_curr = self.voxels['images'][index_curr] / 255.
 
         image_prev = torch.from_numpy(np.array(image_prev).astype(np.float32))
         image_curr = torch.from_numpy(np.array(image_curr).astype(np.float32))

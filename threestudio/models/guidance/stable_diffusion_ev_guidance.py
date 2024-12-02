@@ -159,7 +159,7 @@ class StableDiffusionEventGuidance(BaseObject):
 
     @torch.cuda.amp.autocast(enabled=False)
     def encode_images(
-        self, imgs: Float[Tensor, "B 3 512 512"]
+        self, imgs: Float[Tensor, "B 3 512 512"]    # range of [0, 1]
     ) -> Float[Tensor, "B 4 64 64"]:
         input_dtype = imgs.dtype
         imgs = imgs * 2.0 - 1.0
