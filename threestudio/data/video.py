@@ -34,24 +34,28 @@ from threestudio.utils.typing import *
 class VideoEventDataModuleConfig:
     # height and width should be Union[int, List[int]]
     # but OmegaConf does not support Union of containers
-    height: Any = 512
-    width: Any = 512
+    height: Any = 64
+    width: Any = 64
     image_path: str = ""
+    batch_size: int = 1
 
 
 class VideoEventDataset(Dataset):
-    def __init__(self, voxels_path, mode) -> None:
+    def __init__(self, voxels_path, mode, num_frame=None) -> None:
         super().__init__()
 
         self.voxels = h5py.File(voxels_path, 'r')
-        self.num_frame = self.voxels['images'].shape[0]
+        self.num_frame = self.voxels['images'].shape[0] if num_frame is None else num_frame
 
         self.mode = mode
 
     def __len__(self):
-        return self.num_frame - 1
+        # return self.num_frame - 1
+        return 10000
 
     def __getitem__(self, index):
+        index = index % (self.num_frame - 1)
+
         index_prev = index
         index_curr = index + 1
 
@@ -79,11 +83,11 @@ class VideoEventDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None) -> None:
         if stage in [None, "fit"]:
-            self.train_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="train")
+            self.train_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="train", num_frame=100)
         if stage in [None, "fit", "validate"]:
-            self.val_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="val")
+            self.val_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="val", num_frame=100)
         if stage in [None, "test", "predict"]:
-            self.test_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="test")
+            self.test_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="test", num_frame=100)
 
     def prepare_data(self):
         data_dir = self.cfg.image_path
@@ -93,14 +97,13 @@ class VideoEventDataModule(pl.LightningDataModule):
 
     def general_loader(self, dataset, batch_size, shuffle=False) -> DataLoader:
         return DataLoader(
-            dataset, num_workers=0, batch_size=batch_size, shuffle=shuffle,
+            dataset, batch_size=batch_size, shuffle=shuffle, num_workers=16,
         )
 
     def train_dataloader(self) -> DataLoader:
         return self.general_loader(
             self.train_dataset,
             batch_size=self.cfg.batch_size,
-            collate_fn=self.train_dataset.collate,
             shuffle=True,
         )
 

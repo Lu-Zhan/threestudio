@@ -14,4 +14,5 @@ from . import (
     textmesh,
     zero123,
     zero123_simple,
+    eventfusion,
 )

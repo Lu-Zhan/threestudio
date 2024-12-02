@@ -19,9 +19,11 @@ class EventFusion(BaseLift3DSystem):
     def configure(self):
         # create geometry, material, background, renderer
         # super().configure()
-        video_shape = [100, 3, 128, 128]
+        video_shape = [100, 3, 512, 512]
+        voxels = torch.sigmoid(torch.randn(video_shape))
+
         self.voxels = torch.nn.Parameter(
-            torch.randn(video_shape) * 0.5 + 0.5, requires_grad=True
+            voxels, requires_grad=True
         )
     
     def forward(self, t_index):
@@ -40,22 +42,29 @@ class EventFusion(BaseLift3DSystem):
     
     def _calculate_event_loss(self, image_prev, image_curr, gt_diff):
         pred_diff = image_curr - image_prev
-        return torch.functional.mse_loss(pred_diff, gt_diff)
+        return torch.nn.functional.mse_loss(pred_diff, gt_diff)
 
     def training_step(self, batch, batch_idx):
-        batch_prev, batch_curr = self._separate_batch(batch)
+        gt_image_prev = batch['image_prev']
+        gt_image_curr = batch['image_curr']
+        index_prev = batch['index_prev']
+        index_curr = batch['index_curr']
 
-        noisy_image_prev = self(batch_prev['t_index'])
-        noisy_image_curr = self(batch_curr['t_index'])
+        noisy_image_prev = self(index_prev)
+        noisy_image_curr = self(index_curr)
 
         prompt_utils = self.prompt_processor()
 
         guidance_out_prev = self.guidance(
-            noisy_image_prev, prompt_utils, **batch, rgb_as_latents=False
+            rgb=noisy_image_prev.permute(0, 2, 3, 1), 
+            prompt_utils=prompt_utils,
+            rgb_as_latents=False,
         )
 
         guidance_out_curr = self.guidance(
-            noisy_image_curr, prompt_utils, **batch, rgb_as_latents=False
+            rgb=noisy_image_curr.permute(0, 2, 3, 1), 
+            prompt_utils=prompt_utils,
+            rgb_as_latents=False,
         )
 
         loss_sds = (guidance_out_prev["loss_sds"] + guidance_out_curr["loss_sds"]) / 2
@@ -67,7 +76,7 @@ class EventFusion(BaseLift3DSystem):
         loss_event = self._calculate_event_loss(
             image_prev=denoised_prev_image, 
             image_curr=denoised_curr_image, 
-            gt_diff=(batch_curr["image"] - batch_prev["image"]),
+            gt_diff=(gt_image_curr - gt_image_prev),
         )
         self.log("train/loss_sds", loss_sds)
 

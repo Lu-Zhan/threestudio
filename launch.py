@@ -10,6 +10,9 @@ import traceback
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
+import torch
+torch.set_float32_matmul_precision('medium')
+
 class ColoredFilter(logging.Filter):
     """
     A logging filter to add color to certain log levels.
