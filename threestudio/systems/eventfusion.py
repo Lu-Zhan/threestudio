@@ -17,7 +17,6 @@ class EventFusion(BaseLift3DSystem):
     cfg: Config
 
     def configure(self):
-        # create geometry, material, background, renderer
         # super().configure()
         video_shape = [100, 3, 512, 512]
         voxels = torch.randn(video_shape)
@@ -73,7 +72,7 @@ class EventFusion(BaseLift3DSystem):
         )
 
         loss_sds = (guidance_out_prev["loss_sds"] + guidance_out_curr["loss_sds"]) / 2
-        self.log("train/loss_sds", loss_sds)
+        self.log("train/loss_sds", loss_sds, on_step=True, on_epoch=False, prog_bar=True)
 
         denoised_image_prev = guidance_out_prev["denoised_image"]
         denoised_image_curr = guidance_out_curr["denoised_image"]
@@ -83,7 +82,7 @@ class EventFusion(BaseLift3DSystem):
             image_curr=denoised_image_curr, 
             gt_diff=(gt_image_curr - gt_image_prev),
         )
-        self.log("train/loss_sds", loss_sds)
+        self.log("train/loss_event", loss_event, on_step=True, on_epoch=False, prog_bar=True)
 
         loss = loss_sds + loss_event
 
@@ -108,7 +107,7 @@ class EventFusion(BaseLift3DSystem):
                     "kwargs": {"data_format": "CHW"},
                 },
             ],
-            name="validation_step",
+            name=f"validation/frame_{batch_idx}",
             step=self.true_global_step,
         )
 
@@ -134,7 +133,7 @@ class EventFusion(BaseLift3DSystem):
                     "kwargs": {"data_format": "CHW"},
                 },
             ],
-            name="test_step",
+            name="test/frame_{batch_idx}",
             step=self.true_global_step,
         )
 
