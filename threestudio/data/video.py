@@ -1,31 +1,32 @@
-import bisect
-import math
+# import bisect
+# import math
+import h5py
 import os
 from dataclasses import dataclass, field
 
-import cv2
+# import cv2
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset, IterableDataset
 
-import threestudio
+# import threestudio
 from threestudio import register
-from threestudio.data.uncond import (
-    RandomCameraDataModuleConfig,
-    RandomCameraDataset,
-    RandomCameraIterableDataset,
-)
-from threestudio.utils.base import Updateable
+# from threestudio.data.uncond import (
+#     RandomCameraDataModuleConfig,
+#     RandomCameraDataset,
+#     RandomCameraIterableDataset,
+# )
+# from threestudio.utils.base import Updateable
 from threestudio.utils.config import parse_structured
-from threestudio.utils.misc import get_rank
-from threestudio.utils.ops import (
-    get_mvp_matrix,
-    get_projection_matrix,
-    get_ray_directions,
-    get_rays,
-)
+# from threestudio.utils.misc import get_rank
+# from threestudio.utils.ops import (
+#     get_mvp_matrix,
+#     get_projection_matrix,
+#     get_ray_directions,
+#     get_rays,
+# )
 from threestudio.utils.typing import *
 
 
@@ -33,17 +34,17 @@ from threestudio.utils.typing import *
 class VideoEventDataModuleConfig:
     # height and width should be Union[int, List[int]]
     # but OmegaConf does not support Union of containers
-    height: Any = 128
-    width: Any = 128
+    height: Any = 512
+    width: Any = 512
     image_path: str = ""
 
 
 class VideoEventDataset(Dataset):
-    def __init__(self, voxels, mode) -> None:
+    def __init__(self, voxels_path, mode) -> None:
         super().__init__()
 
-        self.voxels = voxels
-        self.num_frame = voxels.shape[0]
+        self.voxels = h5py.File(voxels_path, 'r')
+        self.num_frame = self.voxels['images'].shape[0]
 
         self.mode = mode
 
@@ -54,8 +55,11 @@ class VideoEventDataset(Dataset):
         index_prev = index
         index_curr = index + 1
 
-        image_prev = self.voxels[index_prev]
-        image_curr = self.voxels[index_curr]
+        image_prev = self.voxels['images'][index_prev]
+        image_curr = self.voxels['images'][index_curr]
+
+        image_prev = torch.from_numpy(np.array(image_prev).astype(np.float32))
+        image_curr = torch.from_numpy(np.array(image_curr).astype(np.float32))
 
         return {
             "image_prev": image_prev,
@@ -75,17 +79,17 @@ class VideoEventDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None) -> None:
         if stage in [None, "fit"]:
-            self.train_dataset = VideoEventDataset(voxels=self.voxels, mode="train")
+            self.train_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="train")
         if stage in [None, "fit", "validate"]:
-            self.val_dataset = VideoEventDataset(voxels=self.voxels, mode="val")
+            self.val_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="val")
         if stage in [None, "test", "predict"]:
-            self.test_dataset = VideoEventDataset(voxels=self.voxels, mode="test")
+            self.test_dataset = VideoEventDataset(voxels_path=self.voxels_path, mode="test")
 
     def prepare_data(self):
         data_dir = self.cfg.image_path
 
-        # read frames
-        self.voxels = None
+        # read h5 frames
+        self.voxels_path = os.path.join(data_dir, "images.h5")
 
     def general_loader(self, dataset, batch_size, shuffle=False) -> DataLoader:
         return DataLoader(
