@@ -84,7 +84,7 @@ class EventFusion(BaseLift3DSystem):
         )
         self.log("train/loss_event", loss_event, on_step=True, on_epoch=False, prog_bar=True)
 
-        loss = loss_sds + loss_event
+        loss = loss_sds * 0.0001 + loss_event
 
         return {"loss": loss}
 
@@ -93,16 +93,22 @@ class EventFusion(BaseLift3DSystem):
         index_prev = batch['index_prev']
         noisy_image_prev = self(index_prev)[0]
 
+        gt_diff_view = torch.abs(batch['image_curr'][0] - gt_image_prev)
+
         self.save_image_grid(
             f"it{self.true_global_step}-{index_prev}.png",
-            [   
+            [   {
+                    "type": "rgb",
+                    "img": gt_diff_view,
+                    "kwargs": {"data_format": "CHW"},
+                },
                 {
                     "type": "rgb",
                     "img": gt_image_prev,
                     "kwargs": {"data_format": "CHW"},
                 },
                 {
-                    "type": "rgb",
+                    "type": "grayscale",
                     "img": noisy_image_prev,
                     "kwargs": {"data_format": "CHW"},
                 },
