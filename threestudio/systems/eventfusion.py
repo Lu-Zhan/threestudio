@@ -84,7 +84,7 @@ class EventFusion(BaseLift3DSystem):
         )
         self.log("train/loss_event", loss_event, on_step=True, on_epoch=False, prog_bar=True)
 
-        loss = loss_sds * 0.0001 + loss_event
+        loss = loss_sds + loss_event * 1000
 
         return {"loss": loss}
 
