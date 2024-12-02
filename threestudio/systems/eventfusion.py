@@ -94,6 +94,7 @@ class EventFusion(BaseLift3DSystem):
         noisy_image_prev = self(index_prev)[0]
 
         gt_diff_view = torch.abs(batch['image_curr'][0] - gt_image_prev)
+        gt_diff_view = (gt_diff_view - gt_diff_view.min()) / (gt_diff_view.max() - gt_diff_view.min() + 1e-8)
 
         self.save_image_grid(
             f"it{self.true_global_step}-{index_prev}.png",
@@ -108,7 +109,7 @@ class EventFusion(BaseLift3DSystem):
                     "kwargs": {"data_format": "CHW"},
                 },
                 {
-                    "type": "grayscale",
+                    "type": "rgb",
                     "img": noisy_image_prev,
                     "kwargs": {"data_format": "CHW"},
                 },
