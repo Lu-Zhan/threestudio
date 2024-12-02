@@ -70,12 +70,12 @@ class EventFusion(BaseLift3DSystem):
         loss_sds = (guidance_out_prev["loss_sds"] + guidance_out_curr["loss_sds"]) / 2
         self.log("train/loss_sds", loss_sds)
 
-        denoised_prev_image = guidance_out_prev["denoised_image"]
-        denoised_curr_image = guidance_out_curr["denoised_image"]
+        denoised_image_prev = guidance_out_prev["denoised_image"]
+        denoised_image_curr = guidance_out_curr["denoised_image"]
 
         loss_event = self._calculate_event_loss(
-            image_prev=denoised_prev_image, 
-            image_curr=denoised_curr_image, 
+            image_prev=denoised_image_prev, 
+            image_curr=denoised_image_curr, 
             gt_diff=(gt_image_curr - gt_image_prev),
         )
         self.log("train/loss_sds", loss_sds)
@@ -85,20 +85,21 @@ class EventFusion(BaseLift3DSystem):
         return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):
-        batch_prev, _ = self._separate_batch(batch)
-        image_prev = self(batch_prev['t_index'])
+        gt_image_prev = batch['image_prev'][0]
+        index_prev = batch['index_prev']
+        noisy_image_prev = self(index_prev)[0]
 
         self.save_image_grid(
-            f"it{self.true_global_step}-{batch['t_index']}.png",
+            f"it{self.true_global_step}-{index_prev}.png",
             [   
                 {
                     "type": "rgb",
-                    "img": batch_prev['gt_frame'][0],
+                    "img": gt_image_prev,
                     "kwargs": {"data_format": "CHW"},
                 },
                 {
                     "type": "rgb",
-                    "img": image_prev,
+                    "img": noisy_image_prev,
                     "kwargs": {"data_format": "CHW"},
                 },
             ],
@@ -110,20 +111,21 @@ class EventFusion(BaseLift3DSystem):
         pass
 
     def test_step(self, batch, batch_idx):
-        batch_prev, _ = self._separate_batch(batch)
-        image_prev = self(batch_prev['t_index'])
+        gt_image_prev = batch['image_prev'][0]
+        index_prev = batch['index_prev']
+        noisy_image_prev = self(index_prev)[0]
 
         self.save_image_grid(
-            f"it{self.true_global_step}-test/{batch['t_index']}.png",
+            f"it{self.true_global_step}-test/{index_prev}.png",
             [   
                 {
                     "type": "rgb",
-                    "img": batch_prev['gt_frame'][0],
+                    "img": gt_image_prev,
                     "kwargs": {"data_format": "CHW"},
                 },
                 {
                     "type": "rgb",
-                    "img": image_prev,
+                    "img": noisy_image_prev,
                     "kwargs": {"data_format": "CHW"},
                 },
             ],

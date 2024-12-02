@@ -50,8 +50,10 @@ class VideoEventDataset(Dataset):
         self.mode = mode
 
     def __len__(self):
-        # return self.num_frame - 1
-        return 10000
+        if self.mode == 'train':
+            return 9999
+        else:
+            return self.num_frame - 1
 
     def __getitem__(self, index):
         index = index % (self.num_frame - 1)
